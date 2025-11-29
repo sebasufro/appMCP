@@ -1,0 +1,6 @@
+{
+    "optimal_threshold": 0.4364,
+    "evaluation_metric": "Equal Error Rate (EER)",
+    "validation_accuracy_at_tau": 1.0,
+    "ROC_AUC": 1.0
+}

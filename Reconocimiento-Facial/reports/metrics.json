@@ -1,0 +1,17 @@
+{
+    "validation_accuracy": 0.9167,
+    "validation_auc": 1.0,
+    "validation_confusion_matrix": [
+        [
+            6,
+            0
+        ],
+        [
+            1,
+            5
+        ]
+    ],
+    "model_type": "LogisticRegression",
+    "n_features": 512,
+    "n_samples": 60
+}

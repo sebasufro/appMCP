@@ -211,3 +211,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+!MCP-Server/requirements.txt
+!MCP-Server/requirements.txt
+
+!MCP-Server/requirements.txt

@@ -16,14 +16,13 @@ sys.path.append(str(BASE_DIR))
 from providers.base import LLMProvider
 from providers.chatgpt import ChatGPTProvider
 from providers.deepseek import DeepSeekProvider
-from rag.retrieve import RAGManager # RAGManager ahora incluye el método .synthesize completo
-# NO necesitamos importar format_context ni get_system_prompt, ya que .synthesize() los usa internamente.
+from rag.retrieve import RAGManager
 
 # Cargar variables de entorno (para claves API)
 load_dotenv()
 
 # --- Configuración Constantes ---
-INDEX_DIR = "data/processed" 
+INDEX_DIR = str(BASE_DIR / "data/processed") 
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2" 
 DEFAULT_LLM = "chatgpt"
 
@@ -209,6 +208,52 @@ def index():
         cost=cost,
         error_message=error_message
     )
+
+@app.route('/api/ask', methods=['POST'])
+def api_ask():
+    """Endpoint API para consultas JSON."""
+    data = request.get_json()
+    if not data or 'question' not in data:
+        return {"error": "Falta el campo 'question'"}, 400
+    
+    question = data['question']
+    provider_name = data.get('provider', DEFAULT_LLM).lower()
+    
+    try:
+        current_retriever = get_retriever()
+        provider_class = PROVIDER_MAP.get(provider_name)
+        
+        if not provider_class:
+            return {"error": f"Proveedor '{provider_name}' no es válido."}, 400
+            
+        provider: LLMProvider = provider_class()
+        
+        # Verificación de clave API
+        api_key_env = "OPENAI_API_KEY" if provider_name == "chatgpt" else "DEEPSEEK_API_KEY"
+        if not os.getenv(api_key_env):
+            return {"error": f"La variable de entorno {api_key_env} no está configurada."}, 500
+            
+        logger.info(f"API Request: '{question}' provider: {provider.name}")
+        
+        rag_response = current_retriever.synthesize(
+            provider=provider,
+            original_query=question,
+            k=5, 
+            use_rewrite=False
+        )
+        
+        return {
+            "answer": rag_response['answer'],
+            "latency": rag_response['total_latency_sec'],
+            "cost": rag_response['estimated_cost_usd'],
+            "citations": rag_response['retrieved_chunks']
+        }
+
+    except RuntimeError as e:
+        return {"error": f"Error crítico RAG: {str(e)}"}, 500
+    except Exception as e:
+        logger.error(f"API Error: {e}")
+        return {"error": str(e)}, 500
 
 
 # --- Initialization para desarrollo local / AWS EC2 ---

@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 RAW_DATA_DIR = 'data/'
 CROPPED_DATA_DIR = 'data/cropped/'
-INPUT_CLASSES = ['me', 'not_me']
+INPUT_CLASSES = ['Yo', 'Robin', 'Francisco']
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(f'Usando dispositivo: {device}')

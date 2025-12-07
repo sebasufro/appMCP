@@ -24,7 +24,7 @@ Una vez creado, se tiene que instalar las dependencias que se encuentran en requ
 Se ejecuta el script de crop_faces con ````python scripts/crop_faces.py```` para que las imagenes tengan un tamaño aceptable para luego clasificarlas.
 
 ### 3. Crear los embeddings
-Se ejecuta el archivo ````python scripts/embeddings.py```` para organizar las imagenes recortadas para su uso en el entrenamiento del modelo, clasificandolas en dos clases: "me" y "not-me".
+Se ejecuta el archivo ````python scripts/embeddings.py```` para organizar las imagenes recortadas para su uso en el entrenamiento del modelo.
 
 ### 4. Entrenar y Evaluar el modelo
 El modelo se entrena ejecutando ````python train.py````, el cual utiliza LogisticRegression para clasificar los embeddings creados anteriormente para distinguir las clases correspondientes a las imagenes.

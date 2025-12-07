@@ -48,11 +48,19 @@ def train_classifier():
     
     # Evaluación simple en el conjunto de validación
     y_pred = model.predict(X_val_scaled)
-    y_proba = model.predict_proba(X_val_scaled)[:, 1]
+    y_proba = model.predict_proba(X_val_scaled)
     
     # Métricas
     accuracy = accuracy_score(y_val, y_pred)
-    auc = roc_auc_score(y_val, y_proba)
+    try:
+        auc = roc_auc_score(y_val, y_proba, multi_class='ovr')
+    except ValueError:
+        # Fallback for binary classification if only 2 classes are present in validation set
+        if y_proba.shape[1] == 2:
+             auc = roc_auc_score(y_val, y_proba[:, 1])
+        else:
+             auc = 0.0 # Should not happen with OVR but safe fallback
+
     cm = confusion_matrix(y_val, y_pred).tolist()
     
     metrics = {

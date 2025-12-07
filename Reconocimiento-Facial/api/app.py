@@ -32,6 +32,15 @@ mtcnn = MTCNN(image_size=160, margin=0, device=DEVICE)
 resnet = InceptionResnetV1(pretrained='vggface2').eval().to(DEVICE)
 
 # Cargar el clasificador y el escalador de scikit-learn
+# Cargar configuración de clases
+CLASSES_PATH = os.path.join(BASE_DIR, 'data/classes.json')
+try:
+    with open(CLASSES_PATH, 'r') as f:
+        CLASSES_MAP = json.load(f)
+    print(f"Clases cargadas: {CLASSES_MAP}")
+except Exception as e:
+    print(f"Error cargando classes.json: {e}")
+# Cargar el clasificador y el escalador de scikit-learn
 try:
     classifier = joblib.load(MODEL_PATH)
     scaler = joblib.load(SCALER_PATH)
@@ -41,12 +50,18 @@ except Exception as e:
     classifier = None
     scaler = None
 
+
+
+# Target User para "is_me" (Por defecto "Yo" si no se especifica)
+TARGET_USER = os.getenv('TARGET_USER', 'Yo')
+
 @app.route('/status', methods=['GET'])
 def status():
     return jsonify({
         "status": "ok",
         "model_loaded": classifier is not None,
-        "device": str(DEVICE)
+        "device": str(DEVICE),
+        "classes": CLASSES_MAP
     }), 200
 
 @app.route('/verify', methods=['POST'])
@@ -61,6 +76,7 @@ def verify():
         "timing_ms": 0.0,
         "score": None,
         "is_me": None,
+        "detected_class": None,
         "input_size_bytes": 0
     }
 
@@ -112,15 +128,24 @@ def verify():
 
         # Clasificación
         embedding_scaled = scaler.transform(embedding)
-        score = classifier.predict_proba(embedding_scaled)[0, 1]
+        probabilities = classifier.predict_proba(embedding_scaled)[0]
+        
+        # Obtener la clase con mayor probabilidad
+        max_prob_index = np.argmax(probabilities)
+        max_prob = probabilities[max_prob_index]
+        detected_class_name = CLASSES_MAP.get(str(max_prob_index), "Desconocido")
         
         # Decisión y Umbral de Seguridad
-        is_me = bool(score >= THRESHOLD)
+        is_confident = bool(max_prob >= THRESHOLD)
+        
+        # Lógica de is_me: Si es confiable Y la clase detectada es el TARGET_USER
+        is_me = is_confident and (detected_class_name == TARGET_USER)
         
         # Respuesta
-        log_data["result"] = "VERIFICADO" if is_me else "RECHAZO_PUNTUACION"
-        log_data["score"] = round(score, 4)
+        log_data["result"] = "VERIFICADO" if is_me else ("IDENTIFICADO_OTRO" if is_confident else "RECHAZO_PUNTUACION")
+        log_data["score"] = round(float(max_prob), 4)
         log_data["is_me"] = is_me
+        log_data["detected_class"] = detected_class_name
         log_data["timing_ms"] = round((time.time() - start_time) * 1000, 2)
         
         print(json.dumps(log_data))
@@ -128,7 +153,8 @@ def verify():
         response = {
             "model_version": MODEL_VERSION,
             "is_me": is_me,
-            "score": round(score, 4),
+            "detected_class": detected_class_name,
+            "score": round(float(max_prob), 4),
             "threshold": THRESHOLD,
             "timing_ms": round((time.time() - start_time) * 1000, 2)
         }
@@ -144,4 +170,4 @@ def verify():
         return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=os.getenv('DEBUG', 'True') == 'True')
+    app.run(host='0.0.0.0', port=5001, debug=os.getenv('DEBUG', 'True') == 'True')

@@ -1,8 +1,9 @@
 import os
+import json
 import torch
 import numpy as np
 import pandas as pd
-from facenet_pytorch import InceptionResnetV1
+from facenet_pytorch import InceptionResnetV1, fixed_image_standardization
 from PIL import Image
 from tqdm import tqdm
 
@@ -10,7 +11,7 @@ CROPPED_DATA_DIR = 'data/cropped/'
 OUTPUT_DIR = 'data/'
 EMBEDDINGS_FILE = os.path.join(OUTPUT_DIR, 'embeddings.npy')
 LABELS_FILE = os.path.join(OUTPUT_DIR, 'labels.csv')
-INPUT_CLASSES = ['me', 'not_me']
+INPUT_CLASSES = ['Yo', 'Robin', 'Francisco']
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(f'Usando dispositivo: {device}')
@@ -24,15 +25,17 @@ def generate_embeddings():
     all_labels = []
     
     # Recorrer las carpetas de imágenes recortadas
-    for class_name in INPUT_CLASSES:
+    all_filenames = []
+    
+    for i, class_name in enumerate(INPUT_CLASSES):
         class_dir = os.path.join(CROPPED_DATA_DIR, class_name)
         
-        # signar etiqueta numérica
-        label = 1 if class_name == 'me' else 0
+        # Asignar etiqueta numérica basada en el índice de la clase
+        label = i
         
         image_files = [f for f in os.listdir(class_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         
-        print(f"\nGenerando embeddings para la clase: **{class_name}** ({len(image_files)} archivos)")
+        print(f"\nGenerando embeddings para la clase: **{class_name}** (label: {label}) ({len(image_files)} archivos)")
         
         # Procesar y generar embeddings
         for filename in tqdm(image_files):
@@ -42,8 +45,12 @@ def generate_embeddings():
                 # Cargar la imagen
                 img = Image.open(file_path).convert('RGB')
                 
-                # Convertir a tensor y preprocesar
+                # Resize a 160x160 (entrada esperada por InceptionResnetV1)
+                img = img.resize((160, 160))
+                
+                # Convertir a tensor y preprocesar (standardization)
                 img_tensor = torch.as_tensor(np.array(img), dtype=torch.float32).permute(2, 0, 1).unsqueeze(0).to(device)
+                img_tensor = fixed_image_standardization(img_tensor)
                 
                 # Desactivar cálculo de gradientes para solo inferencia
                 with torch.no_grad():
@@ -51,6 +58,7 @@ def generate_embeddings():
                 
                 all_embeddings.append(embedding)
                 all_labels.append(label)
+                all_filenames.append(filename)
                 
             except Exception as e:
                 print(f"Error generando embedding para {filename}: {e}")
@@ -62,11 +70,17 @@ def generate_embeddings():
     print(f"\nEmbeddings guardados en: **{EMBEDDINGS_FILE}** ({embeddings_array.shape})")
     
     # Guardar las etiquetas como un archivo CSV
-    labels_df = pd.DataFrame({'filename': [f for f in os.listdir(os.path.join(CROPPED_DATA_DIR, 'me'))] + 
-                                         [f for f in os.listdir(os.path.join(CROPPED_DATA_DIR, 'not_me')) if os.path.exists(os.path.join(CROPPED_DATA_DIR, 'not_me', f))],
+    labels_df = pd.DataFrame({'filename': all_filenames,
                               'label': all_labels})
     labels_df.to_csv(LABELS_FILE, index=False)
     print(f"Etiquetas guardadas en: **{LABELS_FILE}**")
+
+    # Guardar el mapeo de clases
+    class_mapping = {i: name for i, name in enumerate(INPUT_CLASSES)}
+    mapping_path = os.path.join(OUTPUT_DIR, 'classes.json')
+    with open(mapping_path, 'w') as f:
+        json.dump(class_mapping, f, indent=4)
+    print(f"Mapeo de clases guardado en: **{mapping_path}**")
 
     print("\nGeneración de embeddings completada")
 

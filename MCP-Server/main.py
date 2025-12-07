@@ -23,8 +23,8 @@ STATIC_DIR = BASE_DIR / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Configuration
-FACE_REC_URL = os.getenv("FACE_REC_URL", "http://localhost:5001/verify")
-CHATBOT_URL = os.getenv("CHATBOT_URL", "http://localhost:8080/api/ask")
+FACE_REC_URL = os.getenv("FACE_REC_URL", "http://localhost:8002/verify")
+CHATBOT_URL = os.getenv("CHATBOT_URL", "http://localhost:8001/api/ask")
 
 # Serve Index
 @app.get("/")

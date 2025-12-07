@@ -1,0 +1,260 @@
+{
+    "name": "MCP Server Orchestrator (PP3)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "identify-and-answer",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ],
+            "id": "webhook-node"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:8002/verify",
+                "sendBinaryData": true,
+                "binaryPropertyName": "image",
+                "options": {}
+            },
+            "name": "Face Verification",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                450,
+                300
+            ],
+            "id": "face-verification-node"
+        },
+        {
+            "parameters": {
+                "jsCode": "const faceData = $input.all()[0].json;\nconst isMe = faceData.is_me === true;\nconst detectedClass = faceData.detected_class || 'unknown';\nconst decision = isMe ? 'identified' : 'unknown';\n\nreturn {\n  json: {\n    decision,\n    identity: faceData,\n    is_me: isMe,\n    detected_class: detectedClass\n  }\n};"
+            },
+            "name": "Logic & Parsing",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                650,
+                300
+            ],
+            "id": "logic-node"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.is_me }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "name": "Is Identified?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                850,
+                300
+            ],
+            "id": "if-node"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://localhost:8001/api/ask",
+                "sendBody": true,
+                "contentType": "json",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "question",
+                            "value": "={{ $('Webhook').item.json.body.question }}"
+                        },
+                        {
+                            "name": "provider",
+                            "value": "chatgpt"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "ChatBot API",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3,
+            "position": [
+                1100,
+                200
+            ],
+            "id": "chatbot-node"
+        },
+        {
+            "parameters": {
+                "operation": "insertOne",
+                "collection": "access_logs",
+                "fields": "={{ JSON.stringify({\n  ts: new Date().toISOString(),\n  route: '/identify-and-answer',\n  decision: $json.decision,\n  identity: $json.identity,\n  pp1_used: true\n}) }}"
+            },
+            "name": "Log Success",
+            "type": "n8n-nodes-base.mongoDb",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                200
+            ],
+            "id": "mongo-success-node",
+            "credentials": {
+                "mongoDb": {
+                    "id": "mongo-local",
+                    "name": "MongoDB Local"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "insertOne",
+                "collection": "access_logs",
+                "fields": "={{ JSON.stringify({\n  ts: new Date().toISOString(),\n  route: '/identify-and-answer',\n  decision: 'unknown',\n  identity: $json.identity,\n  pp1_used: false\n}) }}"
+            },
+            "name": "Log Failure",
+            "type": "n8n-nodes-base.mongoDb",
+            "typeVersion": 1,
+            "position": [
+                1100,
+                450
+            ],
+            "id": "mongo-failure-node",
+            "credentials": {
+                "mongoDb": {
+                    "id": "mongo-local",
+                    "name": "MongoDB Local"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"status\": \"success\",\n  \"decision\": \"identified\",\n  \"answer\": {{ $json.answer }},\n  \"citations\": {{ $json.citations }}\n}",
+                "options": {}
+            },
+            "name": "Respond Success",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1600,
+                200
+            ],
+            "id": "respond-success-node"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={\n  \"status\": \"denied\",\n  \"decision\": \"unknown\",\n  \"message\": \"User not identified\"\n}",
+                "options": {
+                    "responseCode": 403
+                }
+            },
+            "name": "Respond Failure",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1400,
+                450
+            ],
+            "id": "respond-failure-node"
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Face Verification",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Face Verification": {
+            "main": [
+                [
+                    {
+                        "node": "Logic & Parsing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Logic & Parsing": {
+            "main": [
+                [
+                    {
+                        "node": "Is Identified?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Identified?": {
+            "main": [
+                [
+                    {
+                        "node": "ChatBot API",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Log Failure",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "ChatBot API": {
+            "main": [
+                [
+                    {
+                        "node": "Log Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Log Success": {
+            "main": [
+                [
+                    {
+                        "node": "Respond Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Log Failure": {
+            "main": [
+                [
+                    {
+                        "node": "Respond Failure",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

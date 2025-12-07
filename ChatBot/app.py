@@ -260,7 +260,7 @@ def api_ask():
 
 if __name__ == "__main__":
     # Si estás en EC2, recuerda usar 'gunicorn -w 4 'app:app' --bind 0.0.0.0:8080'
-    logger.info("Starting Flask server for local development on http://0.0.0.0:8080")
+    logger.info("Starting Flask server for local development on http://0.0.0.0:8001")
     
     # Intenta cargar el retriever una vez al inicio para verificar fallos fatales
     try:
@@ -269,4 +269,4 @@ if __name__ == "__main__":
         # El error es manejado en la ruta de Flask.
         pass
         
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    app.run(host="0.0.0.0", port=8001, debug=True)

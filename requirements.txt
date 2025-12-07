@@ -1,0 +1,33 @@
+# General / Shared
+python-dotenv
+numpy
+requests
+httpx
+gunicorn
+
+# MCP Server (FastAPI + Mongo)
+fastapi
+uvicorn[standard]
+python-multipart
+motor
+pymongo
+
+# ChatBot (Flask + LLMs + RAG)
+Flask
+loguru
+openai
+tiktoken
+pypdf
+sentence-transformers
+faiss-cpu
+pandas
+tqdm
+
+# Reconocimiento Facial (FaceNet + Torch)
+facenet-pytorch
+torch
+torchvision
+scikit-learn
+joblib
+Pillow
+matplotlib

@@ -1,6 +1,5 @@
 .venv
 .env.example
-requirements.txt
 ChatBot/.env.example
 Reconocimiento-Facial/.env.example
 

@@ -10,13 +10,16 @@ from PIL import Image
 import torch
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.example'))
+# Load .env from project root
+# Go up 2 levels from api/app.py to reach appMCP/
+root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+load_dotenv(os.path.join(root_dir, '.env'))
 
 app = Flask(__name__)
 
-THRESHOLD = float(os.getenv('THRESHOLD'))
-MODEL_VERSION = os.getenv('MODEL_VERSION')
-MAX_MB = int(os.getenv('MAX_MB'))
+THRESHOLD = float(os.getenv('THRESHOLD', '0.7'))
+MODEL_VERSION = os.getenv('MODEL_VERSION', 'v1')
+MAX_MB = int(os.getenv('MAX_MB', '5'))
 MAX_BYTES = MAX_MB * 1024 * 1024
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), '..')

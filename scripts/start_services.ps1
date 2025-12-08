@@ -12,7 +12,7 @@ Start-Process "python" -ArgumentList "ChatBot/app.py" -WorkingDirectory $root
 
 # 3. MCP Server (Port 8000)
 Write-Host "Iniciando MCP Server (Port 8000)..."
-Start-Process "python" -ArgumentList "MCP-Server/main.py" -WorkingDirectory $root
+Start-Process "python" -ArgumentList "api/app.py" -WorkingDirectory $root
 
 Write-Host "¡Todos los servicios iniciados!" -ForegroundColor Yellow
 Write-Host "Recuerda iniciar MongoDB y n8n por separado."

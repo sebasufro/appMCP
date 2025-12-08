@@ -18,7 +18,7 @@ nohup python3 ChatBot/app.py > logs/chatbot.log 2>&1 &
 echo "Started ChatBot (Port 8001) - PID: $!"
 
 # 3. MCP Server (Port 8000)
-nohup python3 MCP-Server/main.py > logs/mcp_server.log 2>&1 &
+nohup python3 api/app.py > logs/mcp_server.log 2>&1 &
 echo "Started MCP Server (Port 8000) - PID: $!"
 
 echo "---------------------------------------------------"

@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 import httpx
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles # Import StaticFiles
 from dotenv import load_dotenv
@@ -25,6 +26,17 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Configuration
 FACE_REC_URL = os.getenv("FACE_REC_URL", "http://localhost:8002/verify")
 CHATBOT_URL = os.getenv("CHATBOT_URL", "http://localhost:8001/api/ask")
+API_TOKEN = os.getenv("API_TOKEN", "super-secret-token")
+security = HTTPBearer()
+
+async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != API_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
 
 # Serve Index
 @app.get("/")
@@ -56,7 +68,8 @@ async def log_service_call(request_id: str, service_type: str, service_name: str
 @app.post("/process")
 async def process_request(
     image: UploadFile = File(...),
-    question: Optional[str] = Form(None) # Make question optional
+    question: Optional[str] = Form(None), # Make question optional
+    token: str = Depends(verify_token) # Security Requirement
 ):
     """
     Orchestrates the flow:

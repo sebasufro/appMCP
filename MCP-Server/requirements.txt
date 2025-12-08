@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-httpx
-python-multipart
-python-dotenv
-motor
-mongo

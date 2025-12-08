@@ -4,6 +4,7 @@ numpy
 requests
 httpx
 gunicorn
+fastmcp
 
 # MCP Server (FastAPI + Mongo)
 fastapi
@@ -22,6 +23,8 @@ sentence-transformers
 faiss-cpu
 pandas
 tqdm
+pytest
+httpx
 
 # Reconocimiento Facial (FaceNet + Torch)
 facenet-pytorch
